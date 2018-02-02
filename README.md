@@ -4,6 +4,8 @@ grub_cmdline
 Role which helps to manage Grub command line arguments.
 
 
+Add alpa saupport for Ubuntu => 16.04 and Debian 9
+
 Example
 -------
 
