@@ -44,3 +44,41 @@
     ansible_distribution_major_version | int >= 7
   notify:
     - Update Grub2 config file
+
+
+# add for Debian version 9
+# /etc/default/grub
+# Importand Variabels
+# GRUB_CMDLINE_LINUX_DEFAULT="console=ptmx console=ttyS0,115200n8 serial"
+# GRUB_TERMINAL=serial
+# GRUB_CMDLINE_LINUX="console=tty0 console=ttyS0,115200n8 serial"
+# GRUB_SERIAL_COMMAND="serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1"
+
+# grub_cmdline_add_args muss noch angeasst werden 
+- name: Get content of the Grub config file for Debian <= 9
+  shell: cat "{{ grub_cmdline_config_v1 }}" | perl -ane '/(?=.*{{ grub_cmdline_add_args | join(")(?=.*") }})/ && print "YES"'
+  register: grub_content
+  changed_when: grub_content.stdout | length == 0
+  when: >
+    ansible_os_family == "Debian" and
+    ansible_distribution_major_version | int <= 9
+
+# 
+- name: Update Grube default config for Debian >= 9
+  lineinfile:
+    dest: "{{ grub_cmdline_default }}"
+    line: GRUB_CMDLINE_LINUX="{{ grub_cmdline_add_args | join(' ') }}"
+    regexp: '^GRUB_CMDLINE_LINUX=""'
+  when: >
+    ansible_os_family == "Debian" and 
+    ansible_distribution_major_version | int >= 9
+
+# Grub update 
+- name: Update Grub default config for Debian <= 9
+  shell: update-grub2
+  with_items: "{{ grub_cmdline_add_args }}"
+  when: >
+    ansible_os_family == "Debian" and
+    ansible_distribution_major_version | int <= 9 and
+    grub_cmdline_add_args | length > 0 and
+    grub_content.stdout | length == 0
